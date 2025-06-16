@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>KEPO</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    body {
+      background: radial-gradient(ellipse at 60% 20%, #282a36 0%, #181824 80%);
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', sans-serif;
+      overflow: hidden;
+    }
+    #container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    #flowerCanvas {
+      background: transparent;
+      margin-bottom: 26px;
+      display: none;
+    }
+    #flowerCanvas.active {
+      display: block;
+    }
+    #clickme {
+      padding: 13px 36px;
+      font-size: 1.1rem;
+      border: none;
+      border-radius: 22px;
+      background: #fff;
+      color: #222;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 15px;
+      box-shadow: 0 4px 16px #fff2;
+      transition: background 0.2s;
+    }
+    #clickme:hover {
+      background: #ffe4f0;
+    }
+    #lovetxt {
+      color: #fff;
+      font-size: 2.3rem;
+      letter-spacing: 0.16em;
+      font-weight: bold;
+      text-shadow:
+        0 0 24px #fff, 0 0 8px #fff, 0 0 14px #fff,
+        0 0 40px #ffbbef, 0 0 3px #a8ffc9;
+      text-align: center;
+      margin-bottom: 10px;
+      opacity: 0;
+      display: none;
+      user-select: none;
+      pointer-events: none;
+      transform: scale(0.7);
+      transition: none;
+      position: relative;
+      width: max-content;
+      min-width: 320px;
+      will-change: opacity, transform;
+    }
+    #lovetxt.smooth-show {
+      display: block;
+      animation: fadeInBounce 1.45s cubic-bezier(.54,2.2,.73,.85);
+      opacity: 1 !important;
+      transform: scale(1.05);
+    }
+    @keyframes fadeInBounce {
+      0%   { opacity:0; transform:scale(0.7);}
+      60%  { opacity:1; transform:scale(1.15);}
+      80%  { opacity:1; transform:scale(0.98);}
+      100% { opacity:1; transform:scale(1.05);}
+    }
+    .sparkle {
+      position: absolute;
+      pointer-events: none;
+      width: 18px;
+      height: 18px;
+      z-index: 3;
+      animation: sparkleAnim 1.3s linear infinite;
+      filter: drop-shadow(0 0 6px #fff) drop-shadow(0 0 2px #ffeefd);
+      will-change: opacity, transform;
+      opacity: 0.85;
+      transition: left 0.2s, top 0.2s;
+    }
+    @keyframes sparkleAnim {
+      0% {opacity:0.35;transform:scale(0.85) rotate(0deg);}
+      40% {opacity:0.95;transform:scale(1.07) rotate(10deg);}
+      100% {opacity:0.35;transform:scale(0.85) rotate(0deg);}
+    }
+    audio {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="lovetxt">TEST YA NYET</div>
+    <canvas id="flowerCanvas" width="350" height="370"></canvas>
+    <button id="clickme">Click Me</button>
+    <!-- Audio autoplay, hidden, tanpa kontrol -->
+    <audio id="bgmusic" src="tiktokio.com_LFDXImpg9qWMmR4hz1OK.mp3" autoplay></audio>
+  </div>
+  <script>
+    // --- FLOWER ANIMATION ---
+    const canvas = document.getElementById('flowerCanvas');
+    const ctx = canvas.getContext('2d');
+    const lovetxt = document.getElementById('lovetxt');
+    const clickBtn = document.getElementById('clickme');
+    const music = document.getElementById('bgmusic');
+    const container = document.getElementById('container');
+
+    function pastelColor(seed) {
+      const h = (seed * 47) % 360;
+      return `hsl(${h},93%,${85+Math.sin(seed)*10}%)`;
+    }
+    function easeOutCubic(x){return 1-Math.pow(1-x,3);}
+    function drawPetal(ctx, angle, len, width, color, open=1, glow=14) {
+      ctx.save();
+      ctx.rotate(angle);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(
+        width*0.25, -len*0.25*open,
+        width, -len*0.6*open,
+        0, -len*open
+      );
+      ctx.bezierCurveTo(
+        -width, -len*0.6*open,
+        -width*0.25, -len*0.25*open,
+        0, 0
+      );
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.shadowColor = "#fff";
+      ctx.shadowBlur = glow;
+      ctx.globalAlpha = 0.98;
+      ctx.fill();
+      ctx.restore();
+    }
+    function drawMainFlower(x, y, size, open, t=0) {
+      ctx.save();
+      ctx.translate(x, y);
+      let petals = 10;
+      let petalLen = size * (0.98 + 0.06 * Math.sin(t/400));
+      let petalWidth = size * 0.34;
+      for (let i = 0; i < petals; ++i) {
+        let angle = 2*Math.PI/petals*i + Math.sin(t/900 + i)*0.03*open;
+        let color = pastelColor(i+1);
+        drawPetal(ctx, angle, petalLen, petalWidth, color, open, 15);
+      }
+      ctx.beginPath();
+      ctx.arc(0, 0, size*0.31*open, 0, Math.PI*2);
+      ctx.fillStyle = "#fff7b1";
+      ctx.shadowColor = "#fffec2";
+      ctx.shadowBlur = 23;
+      ctx.globalAlpha = 0.99;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(0, 0, size*0.17*open, 0, Math.PI*2);
+      ctx.globalAlpha = 0.60;
+      ctx.fillStyle = "#ffc8ee";
+      ctx.shadowBlur = 0;
+      ctx.fill();
+      ctx.restore();
+    }
+    function drawSideFlower(x, y, size, open, t=0, pastelSeed=0) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.globalAlpha = 0.94*open;
+      let petals = 6;
+      let petalLen = size * (0.98 + 0.03 * Math.sin(t/300));
+      let petalWidth = size * 0.23;
+      for (let i = 0; i < petals; ++i) {
+        let angle = 2*Math.PI/petals*i + Math.sin(t/190 + i)*0.07*open;
+        let color = pastelColor(pastelSeed+i);
+        drawPetal(ctx, angle, petalLen, petalWidth, color, open, 8);
+      }
+      ctx.beginPath();
+      ctx.arc(0, 0, size*0.19*open, 0, Math.PI*2);
+      ctx.fillStyle = "#fffec2";
+      ctx.shadowColor = "#fffec2";
+      ctx.shadowBlur = 10;
+      ctx.globalAlpha = 1;
+      ctx.fill();
+      ctx.restore();
+    }
+    function drawStalk(x, y, h, curve, opacity, width=6, t=0, color="#abf2ff") {
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.bezierCurveTo(
+        x + curve*0.7 + Math.sin(t/220)*2, y - h*0.49,
+        x - curve*0.7 + Math.cos(t/300)*2, y - h*0.82,
+        x, y - h
+      );
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 13;
+      ctx.lineCap = "round";
+      ctx.stroke();
+      ctx.restore();
+    }
+    function drawLeaf(x, y, angle, size, opacity, flip=false, wiggle=0, color="#cbffd3") {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle + Math.sin(wiggle)*0.09);
+      if (flip) ctx.scale(-1, 1);
+      ctx.globalAlpha = opacity;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(
+        size*0.28, -size*0.12,
+        size*0.30, -size*0.59,
+        0, -size
+      );
+      ctx.bezierCurveTo(
+        -size*0.30, -size*0.59,
+        -size*0.28, -size*0.12,
+        0, 0
+      );
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.shadowColor = "#fff";
+      ctx.shadowBlur = 8;
+      ctx.fill();
+      ctx.restore();
+    }
+    let anim = {
+      stalks: [0,0,0,0,0],
+      flowers: [0,0,0,0],
+      done: false,
+      startTime: 0
+    };
+    const timings = {
+      stalks: [0, 0.1, 0.18, 0.25, 0.32],
+      stalksDur: 0.50,
+      flowers: [0.58, 0.78, 0.93, 1.1],
+      flowersDur: 0.36
+    };
+
+    function drawScene(t=0) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawStalk(175, 340, 145*anim.stalks[0], 0, 1, 9, t, "#e6e6ff");
+      drawStalk(175-48, 340, 100*anim.stalks[1], -48, 0.92, 6, t, "#b0eaff");
+      drawStalk(175+48, 340, 100*anim.stalks[2], 48, 0.92, 6, t, "#b0eaff");
+      drawStalk(175-80, 340, 64*anim.stalks[3], -46, 0.8, 4, t, "#b0eaff");
+      drawStalk(175+80, 340, 64*anim.stalks[4], 46, 0.8, 4, t, "#b0eaff");
+      drawMainFlower(175, 340-145, 56, anim.flowers[0], t);
+      drawSideFlower(175-48, 340-100, 22, anim.flowers[1], t, 2);
+      drawSideFlower(175+48, 340-100, 22, anim.flowers[2], t, 3);
+      drawSideFlower(175-80, 340-64, 13, anim.flowers[3], t, 6);
+      drawSideFlower(175+80, 340-64, 13, anim.flowers[3], t, 7);
+      drawLeaf(175-30, 340-45, Math.PI*0.7, 22, 0.6*anim.stalks[0], true, Math.sin(t/120));
+      drawLeaf(175+30, 340-45, -Math.PI*0.7, 22, 0.6*anim.stalks[0], false, Math.cos(t/100));
+      drawLeaf(175-56, 340-24, Math.PI*0.5, 13, 0.5*anim.stalks[1], true, Math.sin(t/80));
+      drawLeaf(175+56, 340-24, -Math.PI*0.5, 13, 0.5*anim.stalks[2], false, Math.sin(t/80));
+      for (let i=0; i<8; i++) {
+        let starX = 175 + Math.cos(t/600 + i*0.8)*(90+10*Math.sin(t/900+i));
+        let starY = 340-168 + Math.sin(t/600 + i*0.8)*(38+12*Math.cos(t/860+i));
+        ctx.save();
+        ctx.globalAlpha = 0.44+0.5*Math.abs(Math.sin(t/570+i));
+        ctx.beginPath();
+        ctx.arc(starX, starY, 2 + 2*Math.abs(Math.sin(t/300+i)), 0, Math.PI*2);
+        ctx.fillStyle = "#fffbe8";
+        ctx.shadowColor = "#fff";
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function animateStep() {
+      const now = (performance.now()-anim.startTime)/1000;
+      let finished = true;
+      for(let i=0;i<5;i++){
+        let prog = Math.min(1, Math.max(0, (now-timings.stalks[i])/timings.stalksDur));
+        prog = easeOutCubic(prog);
+        if(prog<1) finished=false;
+        anim.stalks[i]=prog;
+      }
+      for(let i=0;i<4;i++){
+        let prog = Math.min(1, Math.max(0, (now-timings.flowers[i])/timings.flowersDur));
+        prog = easeOutCubic(prog);
+        if(prog<1) finished=false;
+        anim.flowers[i]=prog;
+      }
+      drawScene(performance.now()-anim.startTime);
+      if (!finished) {
+        requestAnimationFrame(animateStep);
+      } else if (!anim.done) {
+        anim.done = true;
+        setTimeout(() => {
+          showLoveText();
+          animateLoop();
+        }, 600);
+      }
+    }
+    let animLoopReq = null;
+    function animateLoop() {
+      drawScene(performance.now()-anim.startTime);
+      animLoopReq = requestAnimationFrame(animateLoop);
+    }
+
+    // --- SPARKLE ANIMATION ---
+    let sparkleEls = [];
+    function getSparklePositions() {
+      const textRect = lovetxt.getBoundingClientRect();
+      const contRect = container.getBoundingClientRect();
+      const x0 = textRect.left - contRect.left;
+      const y0 = textRect.top - contRect.top;
+      const w = textRect.width;
+      const h = textRect.height;
+      const n = 10 + Math.floor(w/60);
+      let arr = [];
+      for(let i=0;i<n;i++) {
+        let rx = x0 + Math.random() * w;
+        let ry = y0 + Math.random() * h;
+        arr.push({x: rx, y: ry});
+      }
+      return arr;
+    }
+    function showLoveText() {
+      lovetxt.style.opacity = 0;
+      lovetxt.classList.remove('smooth-show');
+      lovetxt.style.display = "block";
+      setTimeout(()=>{
+        lovetxt.classList.add('smooth-show');
+        for (let s of sparkleEls) s.remove();
+        sparkleEls = [];
+        setTimeout(()=>{
+          const pos = getSparklePositions();
+          for (let i = 0; i < pos.length; i++) {
+            let s = document.createElement('div');
+            s.className = 'sparkle';
+            s.style.left = (pos[i].x) + 'px';
+            s.style.top = (pos[i].y) + 'px';
+            s.innerHTML = `<svg width="18" height="18"><polygon points="9,2 12,7 17,9 12,11 9,16 6,11 1,9 6,7" fill="#ffeefd" stroke="#fff" stroke-width="0.9"/></svg>`;
+            s.style.animationDelay = `${(Math.random()*0.7).toFixed(2)}s`;
+            container.appendChild(s);
+            sparkleEls.push(s);
+          }
+        }, 350);
+      }, 10);
+    }
+    function hideLoveText() {
+      lovetxt.classList.remove('smooth-show');
+      for (let s of sparkleEls) s.remove();
+      sparkleEls = [];
+      lovetxt.style.display = "none";
+    }
+
+    clickBtn.addEventListener('click', () => {
+      clickBtn.style.display = "none";
+      canvas.classList.add('active');
+      anim = {
+        stalks: [0,0,0,0,0],
+        flowers: [0,0,0,0],
+        done: false,
+        startTime: performance.now()
+      };
+      hideLoveText();
+      drawScene();
+      setTimeout(()=>animateStep(), 200);
+      music.currentTime = 0;
+      music.play();
+    });
+
+    function resetDisplay() {
+      canvas.classList.remove('active');
+      hideLoveText();
+      clickBtn.style.display = "block";
+      if (animLoopReq) {
+        cancelAnimationFrame(animLoopReq);
+        animLoopReq = null;
+      }
+      music.pause();
+    }
+    resetDisplay();
+
+    canvas.addEventListener('click', () => {
+      resetDisplay();
+    });
+
+    // Play audio otomatis saat halaman/pertama interaksi (jika browser mengizinkan)
+    document.addEventListener('DOMContentLoaded', () => {
+      // Untuk iOS/Safari dan Chrome policy, audio akan play setelah interaksi user
+      function tryPlay() {
+        music.play();
+        document.removeEventListener('click', tryPlay);
+      }
+      music.play().catch(() => {
+        // Jika gagal autoplay, play setelah user klik di mana saja
+        document.addEventListener('click', tryPlay);
+      });
+    });
+  </script>
+</body>
+</html>
